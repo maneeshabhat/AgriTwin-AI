@@ -1,87 +1,78 @@
+
 def calculate_water_requirement(
     crop_water_requirement,
     cultivated_area,
-    rainfall
+    effective_rainfall
 ):
     """
-    Estimate the water requirement for a crop.
+    Calculate seasonal irrigation water volume.
 
-    crop_water_requirement: water required per unit area
-    cultivated_area: cultivated area
-    rainfall: effective rainfall contribution
+    crop_water_requirement: mm per growing season
+    cultivated_area: hectares
+    effective_rainfall: mm per growing season
+
+    Returns irrigation requirement in cubic metres.
     """
 
-    total_crop_water = (
-        crop_water_requirement * cultivated_area
-    )
+    if crop_water_requirement < 0:
+        raise ValueError("Crop water requirement cannot be negative.")
 
-    effective_rainfall = rainfall * cultivated_area
+    if cultivated_area <= 0:
+        raise ValueError("Cultivated area must be greater than zero.")
 
-    irrigation_requirement = (
-        total_crop_water - effective_rainfall
-    )
+    if effective_rainfall < 0:
+        raise ValueError("Rainfall cannot be negative.")
 
-    # Water requirement cannot be negative
-    irrigation_requirement = max(
-        irrigation_requirement,
+    net_water_depth = max(
+        crop_water_requirement - effective_rainfall,
         0
     )
 
-    return irrigation_requirement
+    irrigation_volume = (
+        net_water_depth * cultivated_area * 10
+    )
+
+    return irrigation_volume
 
 
 def estimate_water_demand(
     crop,
     crop_water_requirement,
     cultivated_area,
-    rainfall
+    effective_rainfall
 ):
-    """
-    Return water-demand information for a crop.
-    """
-
     irrigation_requirement = calculate_water_requirement(
         crop_water_requirement,
         cultivated_area,
-        rainfall
+        effective_rainfall
     )
 
     return {
         "crop": crop,
-        "water_requirement": crop_water_requirement,
-        "cultivated_area": cultivated_area,
-        "rainfall": rainfall,
-        "irrigation_requirement": irrigation_requirement
+        "water_requirement_mm": crop_water_requirement,
+        "cultivated_area_hectares": cultivated_area,
+        "effective_rainfall_mm": effective_rainfall,
+        "irrigation_requirement_m3": round(
+            irrigation_requirement, 2
+        )
     }
 
 
 def compare_water_requirements(crop_data):
-    """
-    Compare water requirements of different crops.
-
-    Each item should contain:
-    crop
-    crop_water_requirement
-    cultivated_area
-    rainfall
-    """
-
     results = []
 
     for crop in crop_data:
-
         result = estimate_water_demand(
             crop=crop["crop"],
             crop_water_requirement=crop["crop_water_requirement"],
             cultivated_area=crop["cultivated_area"],
-            rainfall=crop["rainfall"]
+            effective_rainfall=crop["effective_rainfall"]
         )
 
         results.append(result)
 
-    # Lowest irrigation requirement first
     results.sort(
-        key=lambda item: item["irrigation_requirement"]
+        key=lambda item: item["irrigation_requirement_m3"]
     )
 
     return results
@@ -89,16 +80,16 @@ def compare_water_requirements(crop_data):
 
 if __name__ == "__main__":
 
-    # Example test
     result = estimate_water_demand(
         crop="Rice",
         crop_water_requirement=1200,
         cultivated_area=1,
-        rainfall=500
+        effective_rainfall=500
     )
 
     print("Crop:", result["crop"])
     print(
         "Irrigation Requirement:",
-        result["irrigation_requirement"]
+        result["irrigation_requirement_m3"],
+        "m³"
     )

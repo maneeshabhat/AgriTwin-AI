@@ -1,3 +1,4 @@
+
 def calculate_groundwater_risk(
     water_demand,
     groundwater_level,
@@ -5,51 +6,40 @@ def calculate_groundwater_risk(
     cultivated_area
 ):
     """
-    Calculate a groundwater sustainability risk score.
+    Calculate seasonal groundwater recharge pressure.
 
-    water_demand: total crop water demand
-    groundwater_level: groundwater level
-    recharge_rate: groundwater recharge rate
-    cultivated_area: cultivated area
+    water_demand: seasonal irrigation demand (m3)
+    groundwater_level: groundwater depth (metres)
+    recharge_rate: annual recharge (m3/year)
+    cultivated_area: area (hectares)
     """
 
-    if groundwater_level <= 0:
-        raise ValueError("Groundwater level must be greater than 0.")
+    if water_demand < 0:
+        raise ValueError("Water demand cannot be negative.")
 
-    if recharge_rate < 0:
-        raise ValueError("Recharge rate cannot be negative.")
+    if groundwater_level <= 0:
+        raise ValueError("Groundwater depth must be greater than zero.")
+
+    if recharge_rate <= 0:
+        raise ValueError("Annual recharge must be greater than zero.")
 
     if cultivated_area <= 0:
-        raise ValueError("Cultivated area must be greater than 0.")
+        raise ValueError("Cultivated area must be greater than zero.")
 
-    # Water demand per unit cultivated area
-    demand_per_area = water_demand / cultivated_area
+    # Seasonal demand compared with annual recharge
+    recharge_pressure = water_demand / recharge_rate
 
-    # Compare demand with available recharge
-    recharge_ratio = demand_per_area / (recharge_rate + 1)
-
-    # Groundwater level factor
-    level_factor = 1 / groundwater_level
-
-    # Combined risk score
-    risk_score = (
-        0.6 * recharge_ratio +
-        0.4 * level_factor
-    )
-
-    return risk_score
+    return recharge_pressure
 
 
 def classify_groundwater_risk(risk_score):
-    """
-    Convert the numerical risk score into a risk category.
-    """
 
-    if risk_score < 0.5:
+    # Provisional academic prototype thresholds
+    if risk_score <= 0.25:
         return "Low"
 
-    elif risk_score < 1.0:
-        return "Medium"
+    elif risk_score <= 0.50:
+        return "Moderate"
 
     else:
         return "High"
@@ -61,9 +51,6 @@ def assess_groundwater(
     recharge_rate,
     cultivated_area
 ):
-    """
-    Complete groundwater risk assessment.
-    """
 
     risk_score = calculate_groundwater_risk(
         water_demand,
@@ -72,31 +59,32 @@ def assess_groundwater(
         cultivated_area
     )
 
-    risk_category = classify_groundwater_risk(
-        risk_score
-    )
-
     return {
-        "water_demand": water_demand,
-        "groundwater_level": groundwater_level,
-        "recharge_rate": recharge_rate,
-        "cultivated_area": cultivated_area,
-        "risk_score": round(risk_score, 4),
-        "risk_category": risk_category
+        "seasonal_water_demand_m3": round(water_demand, 2),
+        "groundwater_depth_m": groundwater_level,
+        "annual_recharge_m3": recharge_rate,
+        "cultivated_area_hectares": cultivated_area,
+        "recharge_pressure_ratio": round(risk_score, 4),
+        "risk_category": classify_groundwater_risk(risk_score)
     }
 
 
 if __name__ == "__main__":
 
-    # Example test data
     result = assess_groundwater(
-        water_demand=1000,
+        water_demand=7000,
         groundwater_level=10,
-        recharge_rate=800,
+        recharge_rate=20000,
         cultivated_area=1
     )
 
-    print("Groundwater Risk Assessment")
-    print("----------------------------")
-    print("Risk Score:", result["risk_score"])
-    print("Risk Category:", result["risk_category"])
+    print("Groundwater Assessment")
+    print("----------------------")
+    print("Seasonal Demand:",
+          result["seasonal_water_demand_m3"], "m3")
+    print("Annual Recharge:",
+          result["annual_recharge_m3"], "m3/year")
+    print("Recharge Pressure:",
+          result["recharge_pressure_ratio"])
+    print("Risk Category:",
+          result["risk_category"])

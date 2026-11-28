@@ -1427,9 +1427,6 @@ elif page == "🧑‍🌾 Farm Analysis":
                             "Season": season_label,
                             "Soil Type": soil_type,
                             "Irrigation Type": irrigation_type,
-                            "Soil test values": (
-                                "Not provided; baseline assumptions used internally"
-                            ),
                             "Temperature (°C)": temperature,
                             "Humidity (%)": humidity,
                             "Rainfall (mm)": rainfall,
@@ -1477,29 +1474,96 @@ elif page == "📊 Insights & Results":
     else:
 
         recommendation = results.get("recommendation")
-        top_recommendations = results.get(
-            "top_recommendations", []
-        )
+
+        # Support both old and new recommendation result formats.
+        saved_recommendations = results.get("top_recommendations", [])
+        top_recommendations = []
+
+        for i, item in enumerate(saved_recommendations):
+
+            crop_name = item.get("Crop") or item.get("crop")
+
+            score = item.get("Overall Score (/100)")
+
+            if score is None and item.get("score") is not None:
+                score = float(item["score"]) * 100
+
+            if score is not None:
+                score = round(float(score), 2)
+
+            if crop_name:
+                top_recommendations.append({
+                    "Rank": item.get("Rank", i + 1),
+                    "Crop": crop_name,
+                    "Overall Score (/100)": score
+                })
 
         if recommendation:
-
             st.subheader("🌱 Best Crop Recommendation")
             st.success(str(recommendation))
+
             st.caption(
-            results.get("recommendation_reason", "")
-        )
+                results.get("recommendation_reason", "")
+            )
 
         st.caption(
             "The seasonal shortlist is an academic demonstration rule. "
             "Verify local crop suitability before making farming decisions."
         )
-        st.subheader("🏆 Top 3 Recommended Crops")
-        st.dataframe(top_recommendations, use_container_width=True)
-        predictions = results["predictions"]
 
-        top_recommendations = results.get(
-            "top_recommendations", []
-        )
+        st.subheader("🏆 Top 3 Recommended Crops")
+
+        if top_recommendations:
+            recommendation_columns = st.columns(3)
+
+            for col, item in zip(recommendation_columns, top_recommendations):
+                with col:
+                    score_text = (
+                        f"Suitability: {item['Overall Score (/100)']}/100"
+                        if item["Overall Score (/100)"] is not None
+                        else "Score unavailable"
+                    )
+
+                    st.metric(
+                        label=f"Rank {item['Rank']}",
+                        value=item["Crop"],
+                        delta=score_text
+                    )
+        with st.expander("🔍 Check why each crop is ranked"):
+
+            yield_debug = pd.DataFrame(results["predictions"])
+            profit_debug = pd.DataFrame(results["financial"])
+            ranking_debug = pd.DataFrame(results["optimization"])
+
+            debug_df = yield_debug[
+                ["Crop", "Predicted Yield (tonnes/hectare)"]
+            ].merge(
+                profit_debug[
+                    ["Crop", "Estimated Profit (₹)"]
+                ],
+                on="Crop"
+            ).merge(
+                ranking_debug[
+                    [
+                        "Crop",
+                        "Profit Score",
+                        "Water Score",
+                        "Groundwater Score",
+                        "Overall Score (/100)"
+                    ]
+                ],
+                on="Crop"
+            )
+
+            st.dataframe(
+                debug_df.sort_values(
+                    "Overall Score (/100)",
+                    ascending=False
+                ),
+                use_container_width=True,
+                hide_index=True
+            )
+        predictions = results["predictions"]
 
         best_seasonal_crop = (
             top_recommendations[0]
